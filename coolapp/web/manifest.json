@@ -1,6 +1,6 @@
 {
-    "name": "coolapp",
-    "short_name": "coolapp",
+    "name": "campuslink",
+    "short_name": "campuslink",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,4 +1,4 @@
-# coolapp
+# campuslink
 
 A new Flutter project.
 

@@ -1,8 +1,14 @@
 // lib/providers/auth_provider.dart
+//
+// PURPOSE: Manages the global authentication STATE of CampusLink.
+// Sits between auth_service.dart (data layer) and screens (UI layer).
+//
+// ⚠️ DEV MODE: Firebase stream removed. Login/Register use fake data.
+// kycStatus is 'verified' so the app routes straight to BottomNavShell.
+// When Petronilo & Eric connect Firebase, restore the full implementation.
 
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
-// Notice we removed the auth_service.dart import so Firebase stays asleep!
 
 enum AuthStatus {
   uninitialized,
@@ -15,8 +21,7 @@ enum AuthStatus {
 class AuthProvider extends ChangeNotifier {
   // ── Private state ──────────────────────────────────────────────────────────
   UserModel? _currentUser;
-  AuthStatus _status =
-      AuthStatus.unauthenticated; // Start unauthenticated for UI testing
+  AuthStatus _status = AuthStatus.unauthenticated;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -32,11 +37,11 @@ class AuthProvider extends ChangeNotifier {
   bool get isUnauthenticated => _status == AuthStatus.unauthenticated;
 
   // ── Constructor ────────────────────────────────────────────────────────────
-  AuthProvider() {
-    // Firebase stream listener removed for UI testing
-  }
+  AuthProvider();
+  // [PETRONILO & ERIC: restore _init() and Firebase stream here]
 
-  // ── FAKE REGISTER ──────────────────────────────────────────────────────────
+  // ── REGISTER ───────────────────────────────────────────────────────────────
+
   Future<bool> register({
     required String fullName,
     required String email,
@@ -46,25 +51,25 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
 
-    // Fake network delay
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
 
-    // Create a fake user object to keep the UI happy
     _currentUser = UserModel(
-      uid: 'dummy_uid_123',
+      uid: 'stub-uid-001',
       fullName: fullName,
-      universityEmail: email, // FIXED
+      universityEmail: email,
       roles: roles,
-      kycStatus: 'pending',
-      // FIXED: Removed createdAt
+      kycStatus:
+          'verified', // ⚠️ DEV BYPASS — change to 'pending' for production
     );
 
-    _status = AuthStatus.pendingKyc;
+    // _resolveStatus reads kycStatus — 'verified' → AuthStatus.authenticated
+    _status = _resolveStatus(_currentUser!);
     _setLoading(false);
     return true;
   }
 
-  // ── FAKE LOGIN ─────────────────────────────────────────────────────────────
+  // ── LOGIN ──────────────────────────────────────────────────────────────────
+
   Future<bool> login({
     required String email,
     required String password,
@@ -72,34 +77,35 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
 
-    // Fake network delay
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
 
-    // Create a fake user object
     _currentUser = UserModel(
-      uid: 'dummy_uid_123',
+      uid: 'stub-uid-001',
       fullName: 'Kwesi Manteaw',
-      universityEmail: email, // FIXED
-      roles: ['seeker'],
-      kycStatus: 'verified',
-      // FIXED: Removed createdAt
+      universityEmail: email,
+      roles: const ['seeker'],
+      kycStatus:
+          'verified', // ⚠️ DEV BYPASS — change to 'pending' for production
     );
 
-    _status = AuthStatus.pendingKyc;
+    // _resolveStatus reads kycStatus — 'verified' → AuthStatus.authenticated
+    _status = _resolveStatus(_currentUser!);
     _setLoading(false);
     return true;
   }
 
-  // ── FAKE SIGN OUT ──────────────────────────────────────────────────────────
+  // ── SIGN OUT ───────────────────────────────────────────────────────────────
+
   Future<void> signOut() async {
     _setLoading(true);
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 300));
     _currentUser = null;
     _status = AuthStatus.unauthenticated;
     _setLoading(false);
   }
 
   // ── UPDATE KYC STATUS ──────────────────────────────────────────────────────
+
   void updateKycStatus(String newStatus) {
     if (_currentUser == null) return;
     _currentUser = _currentUser!.copyWith(kycStatus: newStatus);
@@ -108,6 +114,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ── UPDATE ROLES ───────────────────────────────────────────────────────────
+
   void updateRoles(List<String> newRoles) {
     if (_currentUser == null) return;
     _currentUser = _currentUser!.copyWith(roles: newRoles);
@@ -115,12 +122,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ── CLEAR ERROR ────────────────────────────────────────────────────────────
+
   void clearError() {
     _clearError();
     notifyListeners();
   }
 
   // ── PRIVATE HELPERS ────────────────────────────────────────────────────────
+
   AuthStatus _resolveStatus(UserModel user) {
     switch (user.kycStatus) {
       case 'verified':

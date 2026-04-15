@@ -1,4 +1,10 @@
 // lib/screens/auth/welcome_screen.dart
+//
+// PURPOSE: The first screen a new user sees.
+// - New users → "Create Account" (primary, filled blue)
+// - Returning users → "Login" (outlined, secondary)
+// - No bottom navigation bar on auth screens
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,11 +12,10 @@ import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/primary_button.dart';
-import '../../widgets/secondary_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/trust_badge.dart';
 import '../../core/validators.dart';
-import '../../widgets/campuslink_logo.dart'; // Add this import!
+import '../../widgets/campuslink_logo.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -23,7 +28,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  int _currentNavIndex = 0;
 
   @override
   void dispose() {
@@ -43,10 +47,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
 
     if (!mounted) return;
-
-    if (success) {
-      _handlePostLoginNavigation(auth);
-    }
+    if (success) _handlePostLoginNavigation(auth);
   }
 
   void _handlePostLoginNavigation(AuthProvider auth) {
@@ -82,14 +83,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
+
+      // ── APP BAR ─────────────────────────────────────────────────────────
+      // No back arrow on the entry screen — nothing to go back to
       appBar: AppBar(
         backgroundColor: AppColors.backgroundWhite,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.accent),
-          onPressed: () {},
-        ),
+        automaticallyImplyLeading: false,
         title: const Text(
           'CampusLink',
           style: TextStyle(
@@ -99,11 +100,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ),
         ),
       ),
+
+      // ── NO BOTTOM NAV BAR ────────────────────────────────────────────────
+      // Nav bar only appears inside BottomNavShell for authenticated users
+
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenPadding,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
@@ -111,8 +117,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               children: [
                 const SizedBox(height: AppSpacing.xl),
 
-                // ── LOGO CARD (UPDATED) ──────────────────────────────────────
-                // Swapped the placeholder container for your actual code logo
+                // ── LOGO CARD ──────────────────────────────────────────────
                 Container(
                   width: 90,
                   height: 90,
@@ -139,57 +144,95 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                // ── APP TITLE ───────────────────────────────────────────────
+                // ── APP TITLE ──────────────────────────────────────────────
                 const Text('CampusLink', style: AppTextStyles.appTitle),
                 const SizedBox(height: AppSpacing.sm),
 
-                // ── SUBTITLE ────────────────────────────────────────────────
+                // ── SUBTITLE ───────────────────────────────────────────────
                 const Text(
                   'The exclusive marketplace for university talent.',
                   style: AppTextStyles.subtitle,
                   textAlign: TextAlign.center,
                 ),
+
                 const SizedBox(height: AppSpacing.xl),
 
-                // ── PRIMARY BUTTON: Login ────────────────────────────────────
+                // ── PRIMARY BUTTON: Create Account ─────────────────────────
+                // Filled navy — the action we want new users to take first
                 PrimaryButton(
-                  label: 'Login with University Email',
-                  icon: Icons.email_outlined,
-                  isLoading: auth.isLoading,
-                  onPressed: auth.isLoading ? null : _handleLogin,
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                // ── SECONDARY BUTTON: Create Account ────────────────────────
-                SecondaryButton(
                   label: 'Create Account',
+                  icon: Icons.person_add_outlined,
+                  isLoading: false,
                   onPressed: auth.isLoading
                       ? null
-                      : () => Navigator.pushNamed(context, AppRoutes.register),
+                      : () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.register,
+                          ),
                 ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // ── SECONDARY BUTTON: Login ────────────────────────────────
+                // Outlined — for returning users who already have an account
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: auth.isLoading ? null : _handleLogin,
+                    icon: const Icon(
+                      Icons.email_outlined,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
+                    label: const Text(
+                      'Login with University Email',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppRadius.pillRadius,
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: AppSpacing.lg),
 
-                // ── OR SIGN IN DIVIDER ───────────────────────────────────────
+                // ── OR SIGN IN DIVIDER ─────────────────────────────────────
                 Row(
                   children: [
                     const Expanded(
-                        child: Divider(color: AppColors.divider, thickness: 1)),
+                      child: Divider(color: AppColors.divider, thickness: 1),
+                    ),
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       child: Text(
                         'OR SIGN IN',
-                        style: AppTextStyles.fieldLabel
-                            .copyWith(color: AppColors.textSecondary),
+                        style: AppTextStyles.fieldLabel.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                     const Expanded(
-                        child: Divider(color: AppColors.divider, thickness: 1)),
+                      child: Divider(color: AppColors.divider, thickness: 1),
+                    ),
                   ],
                 ),
+
                 const SizedBox(height: AppSpacing.lg),
 
-                // ── EMAIL FIELD ─────────────────────────────────────────────
+                // ── EMAIL FIELD ────────────────────────────────────────────
                 CustomTextField(
                   label: 'UNIVERSITY EMAIL',
                   hint: 'student@stu.ucc.edu.gh',
@@ -198,9 +241,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   validator: Validators.validateEmail,
                   onChanged: (_) => context.read<AuthProvider>().clearError(),
                 ),
+
                 const SizedBox(height: AppSpacing.md),
 
-                // ── PASSWORD FIELD ──────────────────────────────────────────
+                // ── PASSWORD FIELD ─────────────────────────────────────────
                 CustomTextField(
                   label: 'PASSWORD',
                   hint: '••••••••',
@@ -209,20 +253,24 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   validator: Validators.validatePassword,
                   onChanged: (_) => context.read<AuthProvider>().clearError(),
                 ),
+
                 const SizedBox(height: AppSpacing.sm),
 
-                // ── FORGOT PASSWORD LINK ────────────────────────────────────
+                // ── FORGOT PASSWORD LINK ───────────────────────────────────
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () =>
-                        _showSnackBar('Password reset coming in Sprint 2.'),
-                    child: const Text('Forgot password?',
-                        style: AppTextStyles.link),
+                    onTap: () => _showSnackBar(
+                      'Password reset coming in Sprint 3.',
+                    ),
+                    child: const Text(
+                      'Forgot password?',
+                      style: AppTextStyles.link,
+                    ),
                   ),
                 ),
 
-                // ── AUTH ERROR MESSAGE ──────────────────────────────────────
+                // ── AUTH ERROR MESSAGE ─────────────────────────────────────
                 if (auth.errorMessage != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   Container(
@@ -232,64 +280,40 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       color: AppColors.error.withValues(alpha: 0.08),
                       borderRadius: AppRadius.mdRadius,
                       border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.3)),
+                        color: AppColors.error.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline_rounded,
-                            size: 18, color: AppColors.error),
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          size: 18,
+                          color: AppColors.error,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
                             auth.errorMessage!,
-                            style: AppTextStyles.caption
-                                .copyWith(color: AppColors.error),
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.error,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ],
+
                 const SizedBox(height: AppSpacing.lg),
 
-                // ── TRUST BADGE ─────────────────────────────────────────────
+                // ── TRUST BADGE ────────────────────────────────────────────
                 const TrustBadge(),
+
                 const SizedBox(height: AppSpacing.xl),
               ],
             ),
           ),
         ),
-      ),
-
-      // ── BOTTOM NAVIGATION BAR ───────────────────────────────────────────────
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentNavIndex,
-        onTap: (index) => setState(() => _currentNavIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.backgroundWhite,
-        selectedItemColor: AppColors.navActive,
-        unselectedItemColor: AppColors.navInactive,
-        selectedFontSize: 11,
-        unselectedFontSize: 11,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_outlined),
-              activeIcon: Icon(Icons.grid_view_rounded),
-              label: 'Services'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded),
-              activeIcon: Icon(Icons.chat_bubble_rounded),
-              label: 'Messages'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
-              label: 'Profile'),
-        ],
       ),
     );
   }

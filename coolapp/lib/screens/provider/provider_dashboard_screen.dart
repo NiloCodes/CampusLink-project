@@ -26,7 +26,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/booking_request_card.dart';
-import '../seeker/booking_status_screen.dart';
 import '../provider/add_service_screen.dart';
 
 class ProviderDashboardScreen extends StatefulWidget {

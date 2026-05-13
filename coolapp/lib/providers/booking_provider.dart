@@ -84,8 +84,7 @@ class BookingProvider extends ChangeNotifier {
   // Pending requests list — shown on provider dashboard
   List<BookingModel> get pendingRequests =>
       _providerBookings.where((b) => b.isPending).toList()
-        ..sort((a, b) => (a.createdAt ?? DateTime.now())
-            .compareTo(b.createdAt ?? DateTime.now()));
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
   // Formatted total earnings for display
   String get formattedEarnings => 'GHS ${totalEarnings.toStringAsFixed(2)}';

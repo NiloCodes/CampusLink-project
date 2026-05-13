@@ -39,7 +39,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // =============================================================================
 // SERVICE CATEGORY ENUM
@@ -261,58 +261,58 @@ class ServiceModel {
 
   // // ── FROM FIRESTORE ─────────────────────────────────────────────────────────
   // // [PETRONILO & ERIC: confirm all field names match Firestore exactly]
-  // factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
-  //   final data = doc.data() as Map<String, dynamic>;
-  //   return ServiceModel(
-  //     serviceId: doc.id,
-  //     providerUid: data['providerUid'] ?? '',
-  //     providerName: data['providerName'] ?? '',
-  //     providerAvatarUrl: data['providerAvatarUrl'],
-  //     isVerified: data['isVerified'] ?? false,
-  //     title: data['title'] ?? '',
-  //     description: data['description'] ?? '',
-  //     category: ServiceCategoryExtension.fromString(
-  //         data['category'] ?? 'tech_digital'),
-  //     tags: List<String>.from(data['tags'] ?? []),
-  //     basePrice: (data['basePrice'] ?? 0).toDouble(),
-  //     isPriceNegotiable: data['isPriceNegotiable'] ?? false,
-  //     imageUrl: data['imageUrl'],
-  //     rating: (data['rating'] ?? 0).toDouble(),
-  //     reviewCount: data['reviewCount'] ?? 0,
-  //     isActive: data['isActive'] ?? true,
-  //     createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-  //     providerPhone: data['providerPhone'],
-  //     providerWhatsapp: data['providerWhatsapp'],
-  //     providerInstagram: data['providerInstagram'],
-  //     providerSnapchat: data['providerSnapchat'],
-  //   );
-  // }
+  factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return ServiceModel(
+      serviceId: doc.id,
+      providerUid: data['providerUid'] ?? '',
+      providerName: data['providerName'] ?? '',
+      providerAvatarUrl: data['providerAvatarUrl'],
+      isVerified: data['isVerified'] ?? false,
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      category: ServiceCategoryExtension.fromString(
+          data['category'] ?? 'tech_digital'),
+      tags: List<String>.from(data['tags'] ?? []),
+      basePrice: (data['basePrice'] ?? 0).toDouble(),
+      isPriceNegotiable: data['isPriceNegotiable'] ?? false,
+      imageUrl: data['imageUrl'],
+      rating: (data['rating'] ?? 0).toDouble(),
+      reviewCount: data['reviewCount'] ?? 0,
+      isActive: data['isActive'] ?? true,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      providerPhone: data['providerPhone'],
+      providerWhatsapp: data['providerWhatsapp'],
+      providerInstagram: data['providerInstagram'],
+      providerSnapchat: data['providerSnapchat'],
+    );
+  }
 
-  // // ── TO FIRESTORE ───────────────────────────────────────────────────────────
-  // // [PETRONILO & ERIC: used when provider creates or updates a listing]
-  // Map<String, dynamic> toFirestore() {
-  //   return {
-  //     'providerUid': providerUid,
-  //     'providerName': providerName,
-  //     'providerAvatarUrl': providerAvatarUrl,
-  //     'isVerified': isVerified,
-  //     'title': title,
-  //     'description': description,
-  //     'category': category.firestoreValue,
-  //     'tags': tags,
-  //     'basePrice': basePrice,
-  //     'isPriceNegotiable': isPriceNegotiable,
-  //     'imageUrl': imageUrl,
-  //     'rating': rating,
-  //     'reviewCount': reviewCount,
-  //     'isActive': isActive,
-  //     'createdAt': FieldValue.serverTimestamp(),
-  //     'providerPhone': providerPhone,
-  //     'providerWhatsapp': providerWhatsapp,
-  //     'providerInstagram': providerInstagram,
-  //     'providerSnapchat': providerSnapchat,
-  //   };
-  // }
+  // ── TO FIRESTORE ───────────────────────────────────────────────────────────
+  // [PETRONILO & ERIC: used when provider creates or updates a listing]
+  Map<String, dynamic> toFirestore() {
+    return {
+      'providerUid': providerUid,
+      'providerName': providerName,
+      'providerAvatarUrl': providerAvatarUrl,
+      'isVerified': isVerified,
+      'title': title,
+      'description': description,
+      'category': category.firestoreValue,
+      'tags': tags,
+      'basePrice': basePrice,
+      'isPriceNegotiable': isPriceNegotiable,
+      'imageUrl': imageUrl,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'isActive': isActive,
+      'createdAt': FieldValue.serverTimestamp(),
+      'providerPhone': providerPhone,
+      'providerWhatsapp': providerWhatsapp,
+      'providerInstagram': providerInstagram,
+      'providerSnapchat': providerSnapchat,
+    };
+  }
 
   // ── COPY WITH ──────────────────────────────────────────────────────────────
   ServiceModel copyWith({

@@ -72,8 +72,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
     final completedBookings = bp.providerBookings
         .where((b) => b.isCompleted)
         .toList()
-      ..sort((a, b) => (b.createdAt ?? DateTime.now())
-          .compareTo(a.createdAt ?? DateTime.now()));
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     // Pending = funds held, not yet released
     final pendingAmount = bp.providerBookings

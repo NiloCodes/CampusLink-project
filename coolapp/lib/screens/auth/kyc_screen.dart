@@ -26,7 +26,6 @@
 // The Cloud Function that reviews the submission and flips kycStatus
 // from 'pending' to 'verified' or 'rejected' is triggered server-side.]
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +35,8 @@ import '../../core/routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/campuslink_logo.dart';
+
+import 'dart:typed_data';
 
 class KycScreen extends StatefulWidget {
   const KycScreen({super.key});
@@ -48,13 +49,13 @@ class _KycScreenState extends State<KycScreen> {
   final ImagePicker _picker = ImagePicker();
 
   // Holds the picked image files — null means not yet picked
-  File? _frontImage;
-  File? _backImage;
+  Uint8List? _frontImageBytes;
+  Uint8List? _backImageBytes;
 
   bool _isSubmitting = false;
 
   // True only when both images have been picked
-  bool get _canSubmit => _frontImage != null && _backImage != null;
+  bool get _canSubmit => _frontImageBytes != null && _backImageBytes != null;
 
   // ── IMAGE PICKER ───────────────────────────────────────────────────────────
   // Shows a bottom sheet letting the user choose Camera or Gallery.
@@ -75,15 +76,27 @@ class _KycScreenState extends State<KycScreen> {
 
       if (picked == null) return; // user cancelled
 
+      final bytes = await picked.readAsBytes();
+
+      // IMPORTANT FIX
+      if (bytes.isEmpty) {
+        _showSnackBar('Selected image is invalid.');
+        return;
+      }
+
       setState(() {
         if (isFront) {
-          _frontImage = File(picked.path);
+          _frontImageBytes = bytes;
         } else {
-          _backImage = File(picked.path);
+          _backImageBytes = bytes;
         }
       });
     } catch (e) {
-      _showSnackBar('Could not access camera or gallery. Check permissions.');
+      debugPrint('Image picker error: $e');
+
+      _showSnackBar(
+        'Could not load image. Try another image or refresh the page.',
+      );
     }
   }
 
@@ -344,7 +357,7 @@ class _KycScreenState extends State<KycScreen> {
               Text('FRONT OF STUDENT ID', style: AppTextStyles.fieldLabel),
               const SizedBox(height: AppSpacing.sm),
               _buildUploadCard(
-                image: _frontImage,
+                image: _frontImageBytes,
                 isFront: true,
                 icon: Icons.credit_card_rounded,
                 title: 'Tap to upload front',
@@ -357,7 +370,7 @@ class _KycScreenState extends State<KycScreen> {
               Text('BACK OF STUDENT ID', style: AppTextStyles.fieldLabel),
               const SizedBox(height: AppSpacing.sm),
               _buildUploadCard(
-                image: _backImage,
+                image: _backImageBytes,
                 isFront: false,
                 icon: Icons.credit_card_rounded,
                 title: 'Tap to upload back',
@@ -504,14 +517,13 @@ class _KycScreenState extends State<KycScreen> {
   // thumbnail once an image has been picked.
 
   Widget _buildUploadCard({
-    required File? image,
+    required Uint8List? image,
     required bool isFront,
     required IconData icon,
     required String title,
     required String subtitle,
   }) {
     final bool hasImage = image != null;
-
     return GestureDetector(
       onTap: () => _pickImage(isFront: isFront),
       child: AnimatedContainer(
@@ -536,12 +548,35 @@ class _KycScreenState extends State<KycScreen> {
                   // The image fills the card with rounded corners
                   ClipRRect(
                     borderRadius: AppRadius.lgRadius,
-                    child: Image.file(
-                      image,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+                    child: image != null && image.isNotEmpty
+                        ? Image.memory(
+                            image,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppColors.backgroundField,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image_rounded,
+                                    size: 40,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: AppColors.backgroundField,
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported_rounded,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
                   ),
                   // Dark overlay at the bottom for the "retake" button
                   Positioned(

@@ -1,0 +1,186 @@
+// firestore.rules
+//
+// ✅ PRODUCTION FIRESTORE SECURITY RULES FOR CAMPUSLINK
+//
+// DEPLOY: firebase deploy --only firestore:rules
+//
+// PHILOSOPHY:
+//   1. Default DENY — if no rule matches, the operation is rejected
+//   2. Role-Based Access — seekers and providers have different write permissions
+//   3. escrowStatus is read-only for clients — Cloud Functions use Admin SDK
+//   4. KYC documents are write-once by the owner, read-only by Cloud Functions
+//
+// HELPER FUNCTIONS:
+//   isSignedIn()      — user has a valid Firebase Auth token
+//   isVerified()      — user's kycStatus == 'verified' in Firestore
+//   isOwner(uid)      — the requesting user IS the document owner
+//   isSeeker(uid)     — the requesting user is the seeker on a booking
+//   isProvider(uid)   — the requesting user is the provider on a booking
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // HELPER FUNCTIONS
+    // =========================================================================
+
+    // Is this user signed in at all?
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Is this user's identity verified?
+    // Checks the Firestore document — not just Firebase Auth token.
+    function isVerified() {
+      return isSignedIn() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid))
+               .data.kycStatus == 'verified';
+    }
+
+    // Is the requesting user the document owner?
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // =========================================================================
+    // USERS COLLECTION
+    // =========================================================================
+    // Path: /users/{uid}
+    //
+    // READ:  Any signed-in user can read any user profile (needed for
+    //        displaying provider names and verification badges).
+    // WRITE: Only the owner can update their own profile.
+    //        The kycStatus field can only be set by Cloud Functions
+    //        (Cloud Functions use Admin SDK which bypasses all rules).
+    //        We prevent the client from self-approving their KYC.
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+
+      allow create: if isOwner(uid)
+                    && request.resource.data.kycStatus == 'pending'
+                    && request.resource.data.uid == uid;
+
+      allow update: if isOwner(uid)
+                    // Client cannot change kycStatus — that's Cloud Function only
+                    && request.resource.data.kycStatus
+                       == resource.data.kycStatus;
+    }
+
+    // =========================================================================
+    // SERVICES COLLECTION
+    // =========================================================================
+    // Path: /services/{serviceId}
+    //
+    // READ:   Any signed-in verified user can read active services.
+    //         Providers can read their own inactive services too.
+    // CREATE: Only verified providers can list services.
+    // UPDATE: Only the owning provider can edit their own service.
+    // DELETE: Not allowed — use isActive: false instead (soft delete).
+
+    match /services/{serviceId} {
+      // Anyone signed in can read active services (home feed)
+      allow read: if isSignedIn() &&
+                     (resource.data.isActive == true ||
+                      resource.data.providerUid == request.auth.uid);
+
+      // Only verified users with 'provider' role can create listings
+      allow create: if isVerified()
+                    && request.auth.uid == request.resource.data.providerUid
+                    && _hasProviderRole();
+
+      // Only the listing owner can update
+      allow update: if isSignedIn()
+                    && request.auth.uid == resource.data.providerUid
+                    // Cannot change the providerUid after creation
+                    && request.resource.data.providerUid
+                       == resource.data.providerUid;
+
+      // No hard deletes — use isActive: false
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // BOOKINGS COLLECTION
+    // =========================================================================
+    // Path: /bookings/{bookingId}
+    //
+    // READ:   Only the seeker OR provider on the booking can read it.
+    // CREATE: Only verified seekers can create bookings.
+    //         Cannot book your own service.
+    // UPDATE: Split by which fields are being changed:
+    //   bookingStatus = 'confirmed' or 'cancelled'  → provider only
+    //   bookingStatus = 'inProgress'                → provider only
+    //   bookingStatus = 'completed'                 → seeker only
+    //   escrowStatus  = 'disputed'                  → seeker only, funds must be held
+    //   escrowStatus  = 'held','released','refunded' → Cloud Functions only (Admin SDK)
+    // DELETE: Never.
+
+    match /bookings/{bookingId} {
+
+      // Only the two parties involved can read the booking
+      allow read: if isSignedIn() &&
+                     (request.auth.uid == resource.data.seekerUid ||
+                      request.auth.uid == resource.data.providerUid);
+
+      // Seeker creates the booking
+      allow create: if isVerified()
+                    && request.auth.uid == request.resource.data.seekerUid
+                    // Starting escrowStatus must be 'awaitingPayment'
+                    && request.resource.data.escrowStatus == 'awaitingPayment'
+                    // Cannot book your own service
+                    && request.resource.data.seekerUid
+                       != request.resource.data.providerUid;
+
+      // Provider accepts or declines
+      allow update: if isSignedIn()
+                    && request.auth.uid == resource.data.providerUid
+                    // Only bookingStatus changes (not escrowStatus)
+                    && _onlyChanging(['bookingStatus', 'declineReason', 'updatedAt'])
+                    && request.resource.data.bookingStatus in ['confirmed', 'cancelled']
+                    && resource.data.bookingStatus == 'pending';
+
+      // Provider marks as in-progress
+      allow update: if isSignedIn()
+                    && request.auth.uid == resource.data.providerUid
+                    && _onlyChanging(['bookingStatus', 'updatedAt'])
+                    && request.resource.data.bookingStatus == 'inProgress'
+                    && resource.data.bookingStatus == 'confirmed';
+
+      // Seeker marks as complete (triggers Cloud Function to release escrow)
+      allow update: if isSignedIn()
+                    && request.auth.uid == resource.data.seekerUid
+                    && _onlyChanging(['bookingStatus', 'updatedAt'])
+                    && request.resource.data.bookingStatus == 'completed'
+                    && resource.data.bookingStatus == 'inProgress';
+
+      // Seeker raises a dispute (only when funds are held)
+      allow update: if isSignedIn()
+                    && request.auth.uid == resource.data.seekerUid
+                    && _onlyChanging(['escrowStatus', 'disputeReason', 'updatedAt'])
+                    && request.resource.data.escrowStatus == 'disputed'
+                    && resource.data.escrowStatus == 'held';
+
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // HELPER FUNCTIONS (continued)
+    // =========================================================================
+
+    // Check if the user has the 'provider' role in their user document
+    function _hasProviderRole() {
+      return 'provider' in get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data.roles;
+    }
+
+    // Check that only the listed fields are being changed in an update
+    function _onlyChanging(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(fields);
+    }
+  }
+}

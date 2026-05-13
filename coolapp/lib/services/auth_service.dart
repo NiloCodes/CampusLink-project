@@ -9,8 +9,8 @@
 //   3. Replace stub implementations with real Firebase calls
 //   4. Change kycStatus from 'verified' back to 'pending' in registerUser
 
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/user_model.dart';
 import '../core/validators.dart';
@@ -46,16 +46,15 @@ class AuthResult {
 
 class AuthService {
   // [PETRONILO & ERIC: uncomment when Firebase is configured]
-  // final FirebaseAuth _auth = FirebaseAuth.instance;
-  // final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // static const String _usersCollection = 'users';
 
   // ── CURRENT USER STREAM ────────────────────────────────────────────────────
   // ⚠️ DEV: returns empty stream — Firebase not connected yet
   // [PETRONILO & ERIC: replace with _auth.authStateChanges()]
-  Stream<dynamic> get authStateChanges => Stream.value(null);
-  dynamic get currentFirebaseUser => null;
-
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  User? get currentFirebaseUser => _auth.currentUser;
   // ── REGISTER USER ──────────────────────────────────────────────────────────
 
   Future<AuthResult> registerUser({

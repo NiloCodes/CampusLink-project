@@ -10,11 +10,10 @@
 //   avatars/{uid}/profile.jpg        ← provider profile photo]
 
 import 'dart:io';
-// import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
-// FirebaseStorage get _storage => FirebaseStorage.instance;(uncomment when ready)
-
+  FirebaseStorage get _storage => FirebaseStorage.instance;
   // ---------------------------------------------------------------------------
   // UPLOAD SERVICE IMAGE
   // ---------------------------------------------------------------------------

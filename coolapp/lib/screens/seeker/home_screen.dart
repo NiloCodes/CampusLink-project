@@ -23,6 +23,8 @@ import '../../providers/service_provider.dart';
 import '../../widgets/service_card.dart';
 import '../../widgets/category_chip.dart';
 import 'service_detail_screen.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../../widgets/empty_state.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -63,30 +65,26 @@ class _HomeScreenState extends State<HomeScreen> {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // ── HEADER ─────────────────────────────────────────────────────
+            // ── HEADER ───────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: _buildHeader(user?.fullName ?? 'there'),
             ),
 
-            // ── SEARCH BAR ──────────────────────────────────────────────────
+            // ── SEARCH BAR ───────────────────────────────────────────────
             SliverToBoxAdapter(
               child: _buildSearchBar(sp),
             ),
 
-            // ── CONTENT ─────────────────────────────────────────────────────
+            // ── CONTENT ──────────────────────────────────────────────────
             if (sp.isLoading)
-              // Loading skeleton
               SliverToBoxAdapter(child: _buildLoadingSkeleton())
             else if (sp.errorMessage != null)
-              // Error state
               SliverToBoxAdapter(
                 child: _buildErrorState(sp.errorMessage!),
               )
             else if (_isSearching || sp.selectedCategory != null)
-              // Search / filtered results
               ..._buildFilteredResults(sp)
             else
-              // Normal home feed
               ..._buildHomeFeed(sp),
           ],
         ),
@@ -161,7 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
           // Notification bell
           GestureDetector(
             onTap: () {
-              // TODO: Notifications screen — Sprint 3
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Notifications coming in Sprint 3'),
@@ -222,9 +219,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: TextField(
                 controller: _searchController,
+                textInputAction: TextInputAction.search,
                 onChanged: (value) {
                   setState(() => _isSearching = value.trim().isNotEmpty);
                   sp.search(value);
+                },
+                onSubmitted: (value) {
+                  if (value.trim().isEmpty) return;
+                  FocusScope.of(context).unfocus();
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.searchResults,
+                    arguments: value.trim(),
+                  );
                 },
                 decoration: InputDecoration(
                   hintText: 'Search for tutors, tech repair...',
@@ -251,9 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   filled: false,
                 ),
               ),
@@ -294,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── HOME FEED (normal state) ───────────────────────────────────────────────
+  // ── HOME FEED ─────────────────────────────────────────────────────────────
 
   List<Widget> _buildHomeFeed(ServiceProvider sp) {
     return [
@@ -303,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: _buildCategoriesSection(sp),
       ),
 
-      // Featured for You section header
+      // Featured for You header
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -338,14 +343,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // Bottom padding
       const SliverToBoxAdapter(
         child: SizedBox(height: AppSpacing.xl),
       ),
     ];
   }
 
-  // ── CATEGORIES SECTION ─────────────────────────────────────────────────────
+  // ── CATEGORIES SECTION ────────────────────────────────────────────────────
 
   Widget _buildCategoriesSection(ServiceProvider sp) {
     return Padding(
@@ -353,7 +357,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section header
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.screenPadding,
@@ -375,10 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: AppSpacing.md),
-
-          // Horizontal scrolling category chips
           SizedBox(
             height: 92,
             child: ListView.separated(
@@ -403,13 +403,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── FILTERED RESULTS ───────────────────────────────────────────────────────
+  // ── FILTERED RESULTS ──────────────────────────────────────────────────────
 
   List<Widget> _buildFilteredResults(ServiceProvider sp) {
     final results = sp.filteredServices;
 
     return [
-      // Results header
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -464,8 +463,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
-      // Results list or empty state
       if (results.isEmpty)
         SliverToBoxAdapter(child: _buildEmptyState())
       else
@@ -486,71 +483,30 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-
       const SliverToBoxAdapter(
         child: SizedBox(height: AppSpacing.xl),
       ),
     ];
   }
 
-  // ── LOADING SKELETON ────────────────────────────────────────────────────────
+  // ── LOADING SKELETON ──────────────────────────────────────────────────────
 
   Widget _buildLoadingSkeleton() {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.screenPadding),
-      child: Column(
-        children: List.generate(3, (index) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.md),
-            height: 280,
-            decoration: BoxDecoration(
-              color: AppColors.backgroundField,
-              borderRadius: AppRadius.lgRadius,
-            ),
-          );
-        }),
-      ),
-    );
+    return const SkeletonHomeFeed();
   }
-
-  // ── EMPTY STATE ─────────────────────────────────────────────────────────────
+  // ── EMPTY STATE ───────────────────────────────────────────────────────────
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xxl),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.search_off_rounded,
-            size: 64,
-            color: AppColors.textSecondary,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const Text(
-            'No services found',
-            style: AppTextStyles.heading2,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Try a different search or category.',
-            style: AppTextStyles.subtitle,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          TextButton(
-            onPressed: () {
-              context.read<ServiceProvider>().clearAllFilters();
-              _searchController.clear();
-              setState(() => _isSearching = false);
-            },
-            child: const Text('Clear filters'),
-          ),
-        ],
-      ),
+    return EmptyStates.noServices(
+      onClear: () {
+        context.read<ServiceProvider>().clearAllFilters();
+        _searchController.clear();
+        setState(() => _isSearching = false);
+      },
     );
   }
 
-  // ── ERROR STATE ─────────────────────────────────────────────────────────────
+  // ── ERROR STATE ───────────────────────────────────────────────────────────
 
   Widget _buildErrorState(String message) {
     return Padding(
@@ -583,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── FILTER BOTTOM SHEET ────────────────────────────────────────────────────
+  // ── FILTER BOTTOM SHEET ───────────────────────────────────────────────────
 
   void _showFilterSheet(BuildContext context, ServiceProvider sp) {
     showModalBottomSheet(
@@ -663,7 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── SEE ALL CATEGORIES ─────────────────────────────────────────────────────
+  // ── SEE ALL CATEGORIES ────────────────────────────────────────────────────
 
   void _showAllCategories(BuildContext context, ServiceProvider sp) {
     _showFilterSheet(context, sp);

@@ -20,6 +20,7 @@ import '../../core/constants.dart';
 import '../../models/booking_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../widgets/empty_state.dart';
 
 class EarningsScreen extends StatefulWidget {
   const EarningsScreen({super.key});
@@ -403,9 +404,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
 
   Widget _buildEarningsHistoryCard(BookingModel booking) {
     final date = booking.createdAt;
-    final dateLabel = date != null
-        ? '${date.day}/${date.month}/${date.year}'
-        : 'Unknown date';
+    final dateLabel = '${date.day}/${date.month}/${date.year}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -556,36 +555,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
   // ── EMPTY STATE ───────────────────────────────────────────────────────────
 
   Widget _buildEmptyEarningsState() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: AppRadius.lgRadius,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 48,
-            color: AppColors.textSecondary,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const Text(
-            'No earnings yet',
-            style: AppTextStyles.heading2,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Complete your first booking to start\n'
-            'building your earnings.',
-            style: AppTextStyles.subtitle,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+    return EmptyStates.noEarnings();
   }
 
   // ── LOADING STATE ─────────────────────────────────────────────────────────

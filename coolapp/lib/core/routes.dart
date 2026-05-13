@@ -15,12 +15,16 @@ import '../screens/auth/kyc_screen.dart';
 import '../screens/auth/pending_approval_screen.dart';
 import '../screens/seeker/home_screen.dart';
 import '../screens/provider/provider_dashboard_screen.dart';
+import '../screens/auth/onboarding_screen.dart';
+import '../screens/seeker/search_results_screen.dart';
 
 // =============================================================================
 // ROUTE NAME CONSTANTS
 // =============================================================================
 class AppRoutes {
   AppRoutes._(); // prevent instantiation
+
+  static const String onboarding = '/onboarding';
 
   // -- Auth Flow --
   // We use '/welcome' instead of '/' to avoid clashing with 'home: AuthGate()' in main.dart
@@ -34,6 +38,7 @@ class AppRoutes {
   static const String seekerHome = '/seeker/home';
   static const String serviceDetail = '/seeker/service-detail';
   static const String bookingStatus = '/seeker/booking-status';
+  static const String searchResults = '/search-results';
 
   // -- Provider Flow --
   static const String providerDashboard = '/provider/dashboard';
@@ -49,6 +54,7 @@ class AppRoutes {
 // =============================================================================
 Map<String, WidgetBuilder> get appRoutes => {
       // Auth Flow
+      AppRoutes.onboarding: (context) => const OnboardingScreen(),
       AppRoutes.welcome: (context) => const WelcomeScreen(),
       AppRoutes.login: (context) => const LoginScreen(),
       AppRoutes.register: (context) => const RegisterScreen(),
@@ -57,6 +63,8 @@ Map<String, WidgetBuilder> get appRoutes => {
 
       // Seeker Flow
       AppRoutes.seekerHome: (context) => const HomeScreen(),
+      AppRoutes.searchResults: (context) =>
+          const SearchResultsScreen(query: ''),
 
       // Provider Flow
       AppRoutes.providerDashboard: (context) => const ProviderDashboardScreen(),

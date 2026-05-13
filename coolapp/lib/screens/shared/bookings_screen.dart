@@ -21,6 +21,8 @@ import '../../core/constants.dart';
 import '../../models/booking_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../../widgets/empty_state.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -195,17 +197,7 @@ class _BookingsScreenState extends State<BookingsScreen>
     if (isLoading) return _buildLoadingState();
 
     if (bookings.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.calendar_today_outlined,
-        title: 'No bookings yet',
-        subtitle: 'Services you book will appear here.\n'
-            'Browse the home feed to find something.',
-        actionLabel: 'Browse Services',
-        onAction: () {
-          // Navigate to home tab via BottomNavShell
-          // index 0 = home in seeker nav
-        },
-      );
+      return EmptyStates.noBookings();
     }
 
     // Group bookings by status
@@ -264,14 +256,7 @@ class _BookingsScreenState extends State<BookingsScreen>
     if (isLoading) return _buildLoadingState();
 
     if (bookings.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.inbox_rounded,
-        title: 'No requests yet',
-        subtitle: 'Booking requests from students\n'
-            'will appear here.',
-        actionLabel: 'Go to Dashboard',
-        onAction: () {},
-      );
+      return EmptyStates.noRequests();
     }
 
     final pending = bookings.where((b) => b.isPending).toList();
@@ -785,17 +770,14 @@ class _BookingsScreenState extends State<BookingsScreen>
   }
 
   Widget _buildLoadingState() {
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.all(AppSpacing.screenPadding),
-      itemCount: 4,
-      itemBuilder: (_, __) => Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        height: 80,
-        decoration: BoxDecoration(
-          color: AppColors.backgroundField,
-          borderRadius: AppRadius.lgRadius,
-        ),
-      ),
+      children: const [
+        SkeletonBookingCard(),
+        SkeletonBookingCard(),
+        SkeletonBookingCard(),
+        SkeletonBookingCard(),
+      ],
     );
   }
 

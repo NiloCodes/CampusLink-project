@@ -3,6 +3,9 @@
 // PURPOSE: The circular category filter chip shown on the home screen.
 // Matches wireframe: circular icon container + label below.
 // Tapping selects/deselects the category filter.
+//
+// UPDATED: Replaced emoji Text with Flutter IconData for consistent
+// rendering on all devices including real Android hardware.
 
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
@@ -27,7 +30,7 @@ class CategoryChip extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Circle icon container
+          // ── CIRCLE ICON CONTAINER ────────────────────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 60,
@@ -50,14 +53,17 @@ class CategoryChip extends StatelessWidget {
                   : [],
             ),
             child: Center(
-              child: Text(
-                category.emoji,
-                style: const TextStyle(fontSize: 24),
+              child: Icon(
+                category.icon,
+                size: 26,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
               ),
             ),
           ),
+
           const SizedBox(height: 6),
-          // Category label
+
+          // ── CATEGORY LABEL ───────────────────────────────────────────────
           Text(
             category.displayName,
             style: AppTextStyles.caption.copyWith(

@@ -37,14 +37,14 @@
 // This means if Firestore is replaced with another database, only this
 // file changes — zero UI changes needed.
 
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 // [PETRONILO & ERIC: uncomment when Firebase is configured]
 import '../models/service_model.dart';
 import '../models/booking_model.dart';
 
 class FirestoreService {
   // [PETRONILO & ERIC: uncomment when Firebase is configured]
-  // final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Collection name constants — change once here if Firestore renames them
   static const String _servicesCol = 'services';

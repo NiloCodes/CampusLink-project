@@ -23,13 +23,12 @@ import 'providers/service_provider.dart';
 import 'providers/booking_provider.dart';
 import 'widgets/bottom_nav_shell.dart';
 import 'screens/auth/welcome_screen.dart';
+import 'screens/auth/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   // [PETRONILO & ERIC: uncomment when Firebase is configured]
   // await Firebase.initializeApp();
-
   runApp(const CampusLinkApp());
 }
 
@@ -59,15 +58,6 @@ class CampusLinkApp extends StatelessWidget {
 // =============================================================================
 // AUTH GATE
 // =============================================================================
-// Runs silently on every app launch.
-// Reads AuthStatus and routes the user to the correct screen.
-//
-// FLOW:
-//   uninitialized   → SplashScreen
-//   unauthenticated → WelcomeScreen
-//   pendingKyc      → BottomNavShell (⚠️ DEV BYPASS — change to PendingApprovalScreen)
-//   rejectedKyc     → BottomNavShell (⚠️ DEV BYPASS — change to KycScreen)
-//   authenticated   → BottomNavShell
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -81,16 +71,14 @@ class AuthGate extends StatelessWidget {
         return const _SplashScreen();
 
       case AuthStatus.unauthenticated:
-        return const WelcomeScreen();
+        return const _OnboardingGate();
 
       case AuthStatus.pendingKyc:
-        // ⚠️ DEV BYPASS: skip pending screen so you can see the full app
-        // PRODUCTION: return const PendingApprovalScreen();
+        // ⚠️ DEV BYPASS — change to PendingApprovalScreen() for production
         return const BottomNavShell();
 
       case AuthStatus.rejectedKyc:
-        // ⚠️ DEV BYPASS: skip rejected screen
-        // PRODUCTION: return const KycScreen();
+        // ⚠️ DEV BYPASS — change to KycScreen() for production
         return const BottomNavShell();
 
       case AuthStatus.authenticated:
@@ -100,9 +88,60 @@ class AuthGate extends StatelessWidget {
 }
 
 // =============================================================================
+// ONBOARDING GATE
+// =============================================================================
+// Checks shared_preferences on first launch.
+// Shows OnboardingScreen once, then WelcomeScreen forever after.
+
+class _OnboardingGate extends StatefulWidget {
+  const _OnboardingGate();
+
+  @override
+  State<_OnboardingGate> createState() => _OnboardingGateState();
+}
+
+class _OnboardingGateState extends State<_OnboardingGate> {
+  bool? _hasSeenOnboarding;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final seen = await hasSeenOnboarding();
+    if (mounted) setState(() => _hasSeenOnboarding = seen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Still checking shared_preferences
+    if (_hasSeenOnboarding == null) {
+      return const Scaffold(
+        backgroundColor: AppColors.backgroundLight,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              AppColors.primary,
+            ),
+            strokeWidth: 2.5,
+          ),
+        ),
+      );
+    }
+    // Already seen — go straight to welcome
+    if (_hasSeenOnboarding!) {
+      return const WelcomeScreen();
+    }
+    // First launch — show onboarding
+    return const OnboardingScreen();
+  }
+}
+
+// =============================================================================
 // SPLASH SCREEN
 // =============================================================================
-// Shown briefly while auth state is being determined on app launch.
 
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();

@@ -38,26 +38,25 @@
 // }
 // ─────────────────────────────────────────────────────────────────────────────
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 
 // =============================================================================
 // SERVICE CATEGORY ENUM
 // =============================================================================
-// 7 categories matching the CampusLink marketplace scope.
-// Using an enum prevents typos in category strings across the codebase.
 
 enum ServiceCategory {
-  techDigital, // Tech & Digital Services
-  academicsTutoring, // Academics & Tutoring
-  foodCulinary, // Food & Culinary
-  beautyPersonalCare, // Beauty & Personal Care
-  eventsEntertainment, // Events & Entertainment
-  fashionApparel, // Fashion & Apparel
-  errandsLogistics, // Errands & Logistics
+  techDigital,
+  academicsTutoring,
+  foodCulinary,
+  beautyPersonalCare,
+  eventsEntertainment,
+  fashionApparel,
+  errandsLogistics,
 }
 
 extension ServiceCategoryExtension on ServiceCategory {
-  // Human-readable label shown in the UI
+  // Short label — shown under category chips on home screen
   String get displayName {
     switch (this) {
       case ServiceCategory.techDigital:
@@ -77,7 +76,7 @@ extension ServiceCategoryExtension on ServiceCategory {
     }
   }
 
-  // Full label for category filter chips
+  // Full label — shown in category filter bottom sheet
   String get fullDisplayName {
     switch (this) {
       case ServiceCategory.techDigital:
@@ -97,7 +96,28 @@ extension ServiceCategoryExtension on ServiceCategory {
     }
   }
 
-  // Icon for each category — used in category chips on home screen
+  // Flutter icon — used in category chips on home screen
+  // Replaces emojis for consistent rendering on all devices
+  IconData get icon {
+    switch (this) {
+      case ServiceCategory.techDigital:
+        return Icons.computer_rounded;
+      case ServiceCategory.academicsTutoring:
+        return Icons.school_rounded;
+      case ServiceCategory.foodCulinary:
+        return Icons.restaurant_rounded;
+      case ServiceCategory.beautyPersonalCare:
+        return Icons.face_retouching_natural_rounded;
+      case ServiceCategory.eventsEntertainment:
+        return Icons.camera_alt_rounded;
+      case ServiceCategory.fashionApparel:
+        return Icons.checkroom_rounded;
+      case ServiceCategory.errandsLogistics:
+        return Icons.delivery_dining_rounded;
+    }
+  }
+
+  // Emoji — kept for dropdown selector in add_service_screen only
   String get emoji {
     switch (this) {
       case ServiceCategory.techDigital:
@@ -181,8 +201,6 @@ class ServiceModel {
 
   // ── PRICING ────────────────────────────────────────────────────────────────
   final double basePrice;
-  // If true: "From GHS X — contact provider to agree final price"
-  // If false: "GHS X — fixed price"
   final bool isPriceNegotiable;
 
   final String? imageUrl;
@@ -192,12 +210,10 @@ class ServiceModel {
   final DateTime? createdAt;
 
   // ── PROVIDER CONTACTS ──────────────────────────────────────────────────────
-  // All optional — provider fills in what they have.
-  // At least phone is strongly recommended (validated in add_service_screen).
-  final String? providerPhone; // "0241234567"
-  final String? providerWhatsapp; // full wa.me link or just number
-  final String? providerInstagram; // username only e.g. "abena.repairs"
-  final String? providerSnapchat; // username only e.g. "abena_snap"
+  final String? providerPhone;
+  final String? providerWhatsapp;
+  final String? providerInstagram;
+  final String? providerSnapchat;
 
   const ServiceModel({
     required this.serviceId,
@@ -224,89 +240,79 @@ class ServiceModel {
 
   // ── CONVENIENCE GETTERS ────────────────────────────────────────────────────
 
-  // Price display — changes based on negotiable toggle
-  // Fixed:      "GHS 120"
-  // Negotiable: "From GHS 120"
   String get formattedPrice => isPriceNegotiable
       ? 'From GHS ${basePrice.toStringAsFixed(0)}'
       : 'GHS ${basePrice.toStringAsFixed(0)}';
 
-  // Price label for the booking button
-  // Fixed:      "GHS 120"
-  // Negotiable: "From GHS 120 · Negotiable"
   String get priceLabel => isPriceNegotiable
       ? 'From GHS ${basePrice.toStringAsFixed(0)} · Negotiable'
       : 'GHS ${basePrice.toStringAsFixed(0)}';
 
   String get formattedRating => rating.toStringAsFixed(1);
 
-  // True if provider has at least one contact method filled in
   bool get hasContacts =>
       providerPhone != null ||
       providerWhatsapp != null ||
       providerInstagram != null ||
       providerSnapchat != null;
 
-  // Platform fee = 5% of base price
   double get platformFee => basePrice * 0.05;
-
-  // Total including platform fee
   double get totalWithFee => basePrice + platformFee;
 
-  // ── FROM FIRESTORE ─────────────────────────────────────────────────────────
-  // [PETRONILO & ERIC: confirm all field names match Firestore exactly]
-  factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return ServiceModel(
-      serviceId: doc.id,
-      providerUid: data['providerUid'] ?? '',
-      providerName: data['providerName'] ?? '',
-      providerAvatarUrl: data['providerAvatarUrl'],
-      isVerified: data['isVerified'] ?? false,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      category: ServiceCategoryExtension.fromString(
-          data['category'] ?? 'tech_digital'),
-      tags: List<String>.from(data['tags'] ?? []),
-      basePrice: (data['basePrice'] ?? 0).toDouble(),
-      isPriceNegotiable: data['isPriceNegotiable'] ?? false,
-      imageUrl: data['imageUrl'],
-      rating: (data['rating'] ?? 0).toDouble(),
-      reviewCount: data['reviewCount'] ?? 0,
-      isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      providerPhone: data['providerPhone'],
-      providerWhatsapp: data['providerWhatsapp'],
-      providerInstagram: data['providerInstagram'],
-      providerSnapchat: data['providerSnapchat'],
-    );
-  }
+  // // ── FROM FIRESTORE ─────────────────────────────────────────────────────────
+  // // [PETRONILO & ERIC: confirm all field names match Firestore exactly]
+  // factory ServiceModel.fromFirestore(DocumentSnapshot doc) {
+  //   final data = doc.data() as Map<String, dynamic>;
+  //   return ServiceModel(
+  //     serviceId: doc.id,
+  //     providerUid: data['providerUid'] ?? '',
+  //     providerName: data['providerName'] ?? '',
+  //     providerAvatarUrl: data['providerAvatarUrl'],
+  //     isVerified: data['isVerified'] ?? false,
+  //     title: data['title'] ?? '',
+  //     description: data['description'] ?? '',
+  //     category: ServiceCategoryExtension.fromString(
+  //         data['category'] ?? 'tech_digital'),
+  //     tags: List<String>.from(data['tags'] ?? []),
+  //     basePrice: (data['basePrice'] ?? 0).toDouble(),
+  //     isPriceNegotiable: data['isPriceNegotiable'] ?? false,
+  //     imageUrl: data['imageUrl'],
+  //     rating: (data['rating'] ?? 0).toDouble(),
+  //     reviewCount: data['reviewCount'] ?? 0,
+  //     isActive: data['isActive'] ?? true,
+  //     createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+  //     providerPhone: data['providerPhone'],
+  //     providerWhatsapp: data['providerWhatsapp'],
+  //     providerInstagram: data['providerInstagram'],
+  //     providerSnapchat: data['providerSnapchat'],
+  //   );
+  // }
 
-  // ── TO FIRESTORE ───────────────────────────────────────────────────────────
-  // [PETRONILO & ERIC: used when provider creates or updates a listing]
-  Map<String, dynamic> toFirestore() {
-    return {
-      'providerUid': providerUid,
-      'providerName': providerName,
-      'providerAvatarUrl': providerAvatarUrl,
-      'isVerified': isVerified,
-      'title': title,
-      'description': description,
-      'category': category.firestoreValue,
-      'tags': tags,
-      'basePrice': basePrice,
-      'isPriceNegotiable': isPriceNegotiable,
-      'imageUrl': imageUrl,
-      'rating': rating,
-      'reviewCount': reviewCount,
-      'isActive': isActive,
-      'createdAt': FieldValue.serverTimestamp(),
-      'providerPhone': providerPhone,
-      'providerWhatsapp': providerWhatsapp,
-      'providerInstagram': providerInstagram,
-      'providerSnapchat': providerSnapchat,
-    };
-  }
+  // // ── TO FIRESTORE ───────────────────────────────────────────────────────────
+  // // [PETRONILO & ERIC: used when provider creates or updates a listing]
+  // Map<String, dynamic> toFirestore() {
+  //   return {
+  //     'providerUid': providerUid,
+  //     'providerName': providerName,
+  //     'providerAvatarUrl': providerAvatarUrl,
+  //     'isVerified': isVerified,
+  //     'title': title,
+  //     'description': description,
+  //     'category': category.firestoreValue,
+  //     'tags': tags,
+  //     'basePrice': basePrice,
+  //     'isPriceNegotiable': isPriceNegotiable,
+  //     'imageUrl': imageUrl,
+  //     'rating': rating,
+  //     'reviewCount': reviewCount,
+  //     'isActive': isActive,
+  //     'createdAt': FieldValue.serverTimestamp(),
+  //     'providerPhone': providerPhone,
+  //     'providerWhatsapp': providerWhatsapp,
+  //     'providerInstagram': providerInstagram,
+  //     'providerSnapchat': providerSnapchat,
+  //   };
+  // }
 
   // ── COPY WITH ──────────────────────────────────────────────────────────────
   ServiceModel copyWith({

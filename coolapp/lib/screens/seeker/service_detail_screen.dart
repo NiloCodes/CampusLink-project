@@ -12,12 +12,6 @@
 //   ✓ "CampusLink Secure" sticky bottom badge
 //   ✓ "Book & Pay via MoMo" sticky CTA button with price left + MoMo icon right
 //   ✓ "© 2024 CampusLink. Student Verified." footer
-//
-// EXTRA FEATURES ADDED:
-//   ✓ "This is your listing" guard — provider can't book their own service
-//   ✓ Wishlist heart icon in app bar
-//   ✓ Negotiable price indicator
-//   ✓ Shimmer loading state
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -25,12 +19,9 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../models/service_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/booking_provider.dart';
 import '../../widgets/review_card.dart';
 import '../../widgets/contact_row.dart';
-import '../../widgets/booking_status_card.dart';
 import '../../widgets/payment_bottom_sheet.dart';
-import '../seeker/booking_status_screen.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   final ServiceModel service;
@@ -46,32 +37,63 @@ class ServiceDetailScreen extends StatefulWidget {
 
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   bool _isWishlisted = false;
+  bool _showAllReviews = false;
 
-  // Stub reviews — replaced by Firestore in sprint 3
+  // Stub reviews — replaced by Firestore in Sprint 3
+  // [PETRONILO & ERIC: replace with real Firestore query]
   final List<Map<String, dynamic>> _stubReviews = [
     {
       'rating': 5.0,
-      'text': 'Amazing service! My phone looks brand new.',
+      'text': 'Amazing service! My phone looks brand new. '
+          'Very fast and professional.',
       'reviewer': 'Kwame O.',
+      'date': '2 days ago',
     },
     {
       'rating': 5.0,
-      'text': 'Super fast and very professional.',
+      'text': 'Super fast and very professional. '
+          'Will definitely use again.',
       'reviewer': 'Ama R.',
+      'date': '1 week ago',
     },
     {
       'rating': 4.0,
-      'text': 'Great work, would definitely recommend to friends.',
+      'text': 'Great work, would definitely recommend '
+          'to friends.',
       'reviewer': 'Kofi M.',
+      'date': '2 weeks ago',
+    },
+    {
+      'rating': 5.0,
+      'text': 'Best screen repair on campus. Fixed my '
+          'cracked screen in under 2 hours.',
+      'reviewer': 'Efua A.',
+      'date': '3 weeks ago',
+    },
+    {
+      'rating': 4.0,
+      'text': 'Good service, fair price. Came to my '
+          'hostel which was very convenient.',
+      'reviewer': 'Nana B.',
+      'date': '1 month ago',
     },
   ];
+
+  // Average rating from stub reviews
+  double get _averageRating {
+    if (_stubReviews.isEmpty) return 0;
+    final total = _stubReviews.fold<double>(
+      0,
+      (sum, r) => sum + (r['rating'] as double),
+    );
+    return total / _stubReviews.length;
+  }
 
   void _handleBooking() {
     PaymentBottomSheet.show(
       context,
       widget.service,
       () {
-        // Navigate to bookings screen after successful booking
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
@@ -92,16 +114,18 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final currentUser = auth.currentUser;
-
-    // Guard: provider cannot book their own service
     final isOwnListing = currentUser?.uid == widget.service.providerUid;
+
+    // Show 3 reviews by default, all if expanded
+    final visibleReviews =
+        _showAllReviews ? _stubReviews : _stubReviews.take(3).toList();
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── APP BAR ────────────────────────────────────────────────────
+          // ── APP BAR ────────────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 280,
             pinned: true,
@@ -124,7 +148,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               onPressed: () => Navigator.pop(context),
             ),
             actions: [
-              // Wishlist heart
               IconButton(
                 icon: Container(
                   width: 36,
@@ -172,7 +195,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         )
                       : _heroPlaceholder(),
 
-                  // Gradient overlay at bottom of image
+                  // Gradient overlay
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -192,7 +215,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     ),
                   ),
 
-                  // Category badge (bottom left of image)
+                  // Category badge
                   Positioned(
                     bottom: AppSpacing.md,
                     left: AppSpacing.md,
@@ -221,12 +244,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ),
           ),
 
-          // ── BODY ───────────────────────────────────────────────────────
+          // ── BODY ───────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── SERVICE INFO CARD ──────────────────────────────────
+                // ── SERVICE INFO CARD ────────────────────────────────
                 Container(
                   margin: const EdgeInsets.fromLTRB(
                     AppSpacing.screenPadding,
@@ -253,7 +276,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Title
                           Expanded(
                             child: Text(
                               widget.service.title,
@@ -261,7 +283,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          // Price
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -284,6 +305,35 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         ],
                       ),
 
+                      // Rating summary row
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          // Stars
+                          ...List.generate(5, (index) {
+                            return Icon(
+                              index < _averageRating.floor()
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 16,
+                              color: const Color(0xFFFBBF24),
+                            );
+                          }),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            _averageRating.toStringAsFixed(1),
+                            style: AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${_stubReviews.length} reviews)',
+                            style: AppTextStyles.caption,
+                          ),
+                        ],
+                      ),
+
                       const SizedBox(height: AppSpacing.md),
                       const Divider(color: AppColors.border),
                       const SizedBox(height: AppSpacing.md),
@@ -291,7 +341,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       // Provider row
                       Row(
                         children: [
-                          // Avatar
                           CircleAvatar(
                             radius: 22,
                             backgroundColor: AppColors.backgroundField,
@@ -315,8 +364,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                 : null,
                           ),
                           const SizedBox(width: AppSpacing.sm),
-
-                          // Name + subtitle
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,15 +392,13 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                               ],
                             ),
                           ),
-
-                          // View Profile link
                           GestureDetector(
                             onTap: () {
-                              // TODO: Navigate to provider profile
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Provider profile coming in Sprint 3'),
+                                    'Provider profile coming in Sprint 3',
+                                  ),
                                 ),
                               );
                             },
@@ -368,7 +413,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                 ),
 
-                // ── SERVICE DESCRIPTION ────────────────────────────────
+                // ── SERVICE DESCRIPTION ──────────────────────────────
                 _buildSectionHeader('Service Description'),
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -389,8 +434,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                           style: AppTextStyles.body,
                         ),
                         const SizedBox(height: AppSpacing.md),
-
-                        // Feature chips
                         Row(
                           children: [
                             _featureChip(
@@ -409,7 +452,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                 ),
 
-                // ── CONTACT PROVIDER ───────────────────────────────────
+                // ── CONTACT PROVIDER ─────────────────────────────────
                 if (widget.service.hasContacts) ...[
                   _buildSectionHeader('Contact Provider'),
                   Padding(
@@ -428,7 +471,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                 ],
 
-                // ── NEGOTIABLE PRICE NOTE ──────────────────────────────
+                // ── NEGOTIABLE PRICE NOTE ────────────────────────────
                 if (widget.service.isPriceNegotiable) ...[
                   const SizedBox(height: AppSpacing.md),
                   Padding(
@@ -455,8 +498,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                           Expanded(
                             child: Text(
                               'This service has a negotiable price. '
-                              'Contact the provider first, agree on an amount, '
-                              'then book.',
+                              'Contact the provider first, agree on '
+                              'an amount, then book.',
                               style: AppTextStyles.caption.copyWith(
                                 color: AppColors.accent,
                               ),
@@ -468,41 +511,94 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                 ],
 
-                // ── TOP STUDENT REVIEWS ────────────────────────────────
-                _buildSectionHeader('Top Student Reviews',
-                    trailing: Row(
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 16,
-                          color: Color(0xFFF59E0B),
+                // ── TOP STUDENT REVIEWS ──────────────────────────────
+                _buildSectionHeader(
+                  'Student Reviews',
+                  trailing: Row(
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 16,
+                        color: Color(0xFFFBBF24),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_averageRating.toStringAsFixed(1)}'
+                        ' (${_stubReviews.length})',
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${widget.service.formattedRating}'
-                          ' (${widget.service.reviewCount})',
-                          style: AppTextStyles.body.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    )),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Rating breakdown bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding,
+                  ),
+                  child: _buildRatingBreakdown(),
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // Review cards
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenPadding,
                   ),
                   child: Column(
-                    children: _stubReviews
-                        .map((r) => ReviewCard(
-                              rating: r['rating'],
-                              reviewText: r['text'],
-                              reviewerName: r['reviewer'],
-                            ))
-                        .toList(),
+                    children: [
+                      ...visibleReviews.map((r) => ReviewCard(
+                            rating: r['rating'],
+                            reviewText: r['text'],
+                            reviewerName: r['reviewer'],
+                          )),
+
+                      // See all / Show less button
+                      if (_stubReviews.length > 3)
+                        GestureDetector(
+                          onTap: () => setState(
+                            () => _showAllReviews = !_showAllReviews,
+                          ),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.backgroundField,
+                              borderRadius: AppRadius.lgRadius,
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _showAllReviews
+                                      ? 'Show less'
+                                      : 'See all ${_stubReviews.length} reviews',
+                                  style: AppTextStyles.body.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Icon(
+                                  _showAllReviews
+                                      ? Icons.keyboard_arrow_up_rounded
+                                      : Icons.keyboard_arrow_down_rounded,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
-                // ── CAMPUSLINK SECURE BADGE ────────────────────────────
+                // ── CAMPUSLINK SECURE BADGE ──────────────────────────
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.screenPadding),
                   child: Container(
@@ -537,8 +633,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                 ),
                               ),
                               Text(
-                                'Payment held in escrow until'
-                                ' you\'re satisfied.',
+                                'Payment held in escrow until '
+                                'you\'re satisfied.',
                                 style: AppTextStyles.caption,
                               ),
                             ],
@@ -549,16 +645,120 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                 ),
 
-                // Extra bottom padding for sticky CTA
                 const SizedBox(height: 100),
               ],
             ),
           ),
         ],
       ),
-
-      // ── STICKY BOTTOM CTA ─────────────────────────────────────────────
       bottomNavigationBar: _buildStickyBookingBar(isOwnListing),
+    );
+  }
+
+  // ── RATING BREAKDOWN BAR ──────────────────────────────────────────────────
+
+  Widget _buildRatingBreakdown() {
+    // Count ratings
+    final counts = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+    for (final r in _stubReviews) {
+      final star = (r['rating'] as double).toInt();
+      counts[star] = (counts[star] ?? 0) + 1;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundWhite,
+        borderRadius: AppRadius.lgRadius,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          // Big average number
+          Column(
+            children: [
+              Text(
+                _averageRating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  height: 1.0,
+                ),
+              ),
+              Row(
+                children: List.generate(5, (index) {
+                  return Icon(
+                    index < _averageRating.floor()
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 14,
+                    color: const Color(0xFFFBBF24),
+                  );
+                }),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${_stubReviews.length} reviews',
+                style: AppTextStyles.caption,
+              ),
+            ],
+          ),
+
+          const SizedBox(width: AppSpacing.lg),
+
+          // Star bars
+          Expanded(
+            child: Column(
+              children: [5, 4, 3, 2, 1].map((star) {
+                final count = counts[star] ?? 0;
+                final ratio =
+                    _stubReviews.isEmpty ? 0.0 : count / _stubReviews.length;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Text(
+                        '$star',
+                        style: AppTextStyles.caption,
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 12,
+                        color: Color(0xFFFBBF24),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: ratio,
+                            minHeight: 6,
+                            backgroundColor: AppColors.backgroundField,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Color(0xFFFBBF24),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      SizedBox(
+                        width: 20,
+                        child: Text(
+                          '$count',
+                          style: AppTextStyles.caption,
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -586,7 +786,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isOwnListing)
-            // Provider viewing their own listing
             Container(
               width: double.infinity,
               height: 56,
@@ -606,7 +805,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               ),
             )
           else
-            // Book & Pay button — matches wireframe exactly
             GestureDetector(
               onTap: _handleBooking,
               child: Container(
@@ -625,16 +823,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Price (left side)
                     Padding(
                       padding: const EdgeInsets.only(left: AppSpacing.lg),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'GHS',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: Colors.white70,
                               fontWeight: FontWeight.w500,
@@ -651,17 +848,14 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         ],
                       ),
                     ),
-
-                    // Divider
                     Container(
                       width: 1,
                       height: 36,
                       color: Colors.white.withValues(alpha: 0.3),
-                      margin:
-                          const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                     ),
-
-                    // "Book & Pay via MoMo" (center)
                     const Expanded(
                       child: Text(
                         'Book & Pay via MoMo',
@@ -673,8 +867,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-
-                    // MoMo icon (right)
                     const Padding(
                       padding: EdgeInsets.only(right: AppSpacing.lg),
                       child: Icon(
@@ -687,10 +879,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 ),
               ),
             ),
-
           const SizedBox(height: AppSpacing.xs),
-
-          // Footer text
           Text(
             '© 2024 CampusLink. Student Verified.',
             style: AppTextStyles.caption.copyWith(
@@ -715,7 +904,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       ),
       child: Row(
         children: [
-          // Blue left accent bar
           Container(
             width: 4,
             height: 20,
